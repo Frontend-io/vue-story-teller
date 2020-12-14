@@ -1,0 +1,43 @@
+#app .app-wrapper.blur{
+    filter: blur(1px);
+    transition: .3s;
+}
+#app .overlay{
+    background: rgba(0,0,0,.5);
+    transition: .3s;
+}
+#app .overlay.isOpen{
+    display: block
+}
+#app .modal{
+    transition: .3s;
+    left: 50%;
+    display: none;
+    transform: translateX(-50%);
+    z-index: 999999;
+}
+
+#app .modal.isOpen{
+    display: block;
+}
+
+#app .story{
+    animation: descend .3s ease-in-out
+}
+
+@keyframes descend{
+    from{
+        transform: translateY(-10px)
+    }
+    to{
+        transform: translateY(0px)
+    }
+}
+
+#app .story .edit-story{
+    display: none
+}
+
+#app .story:hover .edit-story{
+    display: block
+}

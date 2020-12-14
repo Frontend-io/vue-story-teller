@@ -1,59 +1,123 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="style.css">
     <link href="https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <script src="https://unpkg.com/vue@3.0.2"></script>
     <title>Hello Vue!</title>
 </head>
+
 <body>
-<div id="app">
-    <div class=" max-h-screen overflow-y-auto p-6 bg-blue-50 h-50 max-w-3xl mx-auto w-50 border ">
-        <div class="header flex justify-between items-center mb-4 text-lg font-semibold">
-            <h1>Recent stories</h1>
-            <button class="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-2 rounded-md text-sm">New Story</button>
-        </div>
-        <div class="flex flex-col">
-            <template v-for="(story,index) in stories">
-                <div class="bg-white p-4 mb-3 w-full shadow-md rounded-sm">
-                    <div>
-                        <small class="text-gray-500 text-sm">Title</small>
-                        <h1 class="font-bold text-lg">{{story.title}}</h1>
-                    </div>
-                    <div class="mt-2">
-                        <small class="text-gray-500 text-sm">Description</small>
-                        <p class="text-md">{{story. description}}</p>
-                        <div class="mt-2 text-sm italic text-gray-500">-by 
-                            <span class="italics">{{story.author}}</span>
-                            on <span class="italics">{{story. date}}</span>
+    <div id="app">
+        <div v-bind:class="{blur: modalOpen}" class="app-wrapper">
+            <div class=" max-h-screen overflow-y-auto p-6 bg-blue-50 pb-12 h-50 max-w-3xl mx-auto w-50 border ">
+                <div class="header flex justify-between items-center mb-4 text-lg font-semibold">
+                    <h1>Recent stories ({{stories.length}})</h1>
+                    <button @click="toggleModal" class="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-2 rounded-md text-sm">New
+                        Story</button>
+                </div>
+                <div class="story flex relative flex-col">
+                    <template v-for="(story,index) in stories">
+                        <div class="bg-white relative p-4 mb-3 w-full shadow-md rounded-sm">
+                            <div class="border-b pb-2 flex flex-nowrap items-center justify-between">
+                                <div>
+                                    <small class="text-gray-500 text-sm">Title</small>
+                                    <h1 class="font-bold text-lg">{{story.title}}</h1>
+                                </div>
+                                <button v-if="story.description.length > 50" @click="readStory(index)" class="bg-white border border-green-500 text-black hover:bg-green-700 hover:text-white font-bold px-6 py-2 rounded-md text-sm">Expand story</button>
+                            </div>
+                            <div class="absolute flex flex-col top-28 right-5 ">
+                                <i
+                                @click="editStory(story, index)" 
+                                :title="story.title" 
+                                class="fa edit-story absolute fa-edit h-10 right-2 w-10 rounded-full bg-white shadow-md cursor-pointer  p-2 pt-3 hover:text-white hover:bg-gray-500 text-center"></i>
+                                <i
+                                @click="()=> deleteStory(index)" 
+                                title="Delete" 
+                                class="fa edit-story fa-trash absolute h-10 w-10 rounded-full shadow-md  cursor-pointer top-30 p-2 pt-3 text-white bg-red-600 hover:bg-red-700 text-center"></i>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-gray-500 text-sm">Description</small>
+                                <p v-bind:class="[ story.read ? '' : 'h-6 overflow-hidden' ]" class="text-md">{{story.description}}</p>
+                                <div class="mt-2 text-sm italic text-gray-500">-by
+                                    <span class="italics">{{story.author}}</span>
+                                    on <span class="italics">{{story.date}}</span>
+                                </div>
+                            </div>
+                            <ul v-if="story.tags" class="flex flex-row mt-4">
+                                <template v-for="(tag, index) in (story.tags.length ? story.tags.split(',') : [])" :key="index">
+                                    <li v-bind:class="[ story.color ? `bg-${story.color}-100 text-${story.color}-500` : '']" class="px-2 py-1 mx-1 text-xs font-bold rounded-sm inline-block">
+                                        #{{tag}}</li>
+                                </template>
+                            </ul>
                         </div>
-                    </div>
-                    <ul class="flex flex-row mt-4">
-                        <template v-for="(tag, index) in story.tags" :key="index" >
-                            <li class="px-2 py-1 mx-1 text-xs text-green-500 rounded-sm inline-block bg-green-50">{{tag}}</li>
-                        </template>
-                    </ul>
+                    </template>
                 </div>
-            </template>
+                <div class="bg-white relative p-4 mb-3 w-full shadow-md rounded-sm">
+                    <h2 class="text-center text-gray-500 italic text-md" v-if="!stories.length">There are no stories</h2>
+                </div>
+            </div>
+        </div>
+
+
+
+        <div v-bind:class="{ isOpen: modalOpen }" class="overlay hidden absolute top-0 h-screen z-30 w-full"></div>
+        <div v-bind:class="{ isOpen: modalOpen }" class="modal absolute hidden left-auto transform translate-x w-full md:max-w-lg bg-white p-4 top-0 md:top-20 border rounded-sm">
+            <h1 class="font-bold mb-2 text-center capitalize py-2 text-lg">Create new story</h1>
+            <span @click="toggleModal" class="text-3xl text-gray-400 absolute right-5 top-2 cursor-pointer hover:text-gray-800 ">&times;</span>
+            <form>
+                <div class="grid md:grid-cols-2 ">
+                    <template v-for="(input, index) in form" :key="index">
+                        <div v-bind:class="{'border-r-0': (index % 2 === 0) }" class="border mb-3 rounded-sm p-4 pt-2">
+                            <small class="text-gray-500 capitalize text-sm">{{input.placeholder}}</small>
+                            <input  
+                            required="true"
+                            v-if="!input.select" 
+                            class="mt-2 bg-gray-50 px-4 py-2 w-full rounded-sm focus:bg-white border border-2"
+                            v-model="fields[input.name]" 
+                            type="text" 
+                            :name='input.name'
+                            :placeholder="input.placeholder" />
+                            <select 
+                            required="true"
+                            placeholder="Story theme" 
+                            class="mt-2 capitalize bg-gray-50 px-4 text-gray-400 py-2 w-full rounded-sm focus:bg-white border border-2"
+                            v-if="input.select"
+                            :name="input.name"
+                            v-model="fields[input.name]">
+                                <option value="">{{input.placeholder}}</option>
+                                <template v-for="(item,index) in input.select">
+                                    <option :value="item">{{item}}</option>
+                                </template>
+                            </select>
+                        </div>
+                    </template>
+                    {{fields.replaceIndex ? true : false}}
+                </div>
+                
+                <div class="border mb-3 rounded-sm p-4 pt-2">
+                    <small class="text-gray-500 capitalize mb-1 text-sm">Description</small>
+                    <textarea
+                    required="true"
+                    class="bg-gray-50 px-4 py-2 w-full rounded-sm focus:bg-white border border-2"
+                    v-model="fields.description" 
+                    :name='description'
+                    placeholder="Description"></textarea>
+                </div>
+                <div class="border mt-8 rounded-sm p-4">
+                    <button 
+                    type='submit'
+                    @click="(e)=> createNewStory(e, fields, fields.toReplace)"
+                    class="bg-green-600 w-full hover:bg-green-700 text-white font-bold px-6 py-4 rounded-md text-sm">Create</button>
+                </div>
+            </form>
         </div>
     </div>
-    <div class=" max-w-sm bg-white p-4 border rounded-sm">
-        <form>
-            <template v-for="(input, index) in form" :key="index">
-                <div v-if="!input.type" class="border mb-3 rounded-sm p-4">
-                    <small>{{input.placeholder}}</small>
-                    <input type="text" name='input.name' class="bg-gray-50 px-4 py-2 w-full focus:bg-white border border-2" placeholder="input.placeholder" />
-                </div>
-                <div v-if="input.type" class="border mb-3 rounded-sm p-4">
-                    <small>{{input.placeholder}}</small>
-                    <textarea name='input.name' class="bg-gray-50 px-4 py-2 w-full focus:bg-white border border-2" placeholder="input.placeholder" />
-                </div>
-            </template>
-        </form>
-    </div>
-</div>
     
 <script src="app.js"></script>
 </body>
